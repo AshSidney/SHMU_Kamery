@@ -11,6 +11,7 @@
     <OutputPath>.</OutputPath>
     <Name>SHMU_Kamery</Name>
     <RootNamespace>SHMU_Kamery</RootNamespace>
+    <IsWindowsApplication>False</IsWindowsApplication>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>

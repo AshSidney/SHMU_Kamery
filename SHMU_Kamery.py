@@ -1,18 +1,54 @@
 import urllib.request
 import html.parser
 import re
+import PIL.Image
+import ffmpeg
 
 def dajZoznamKamier():
   parser = KameraParser()
-  with urllib.request.urlopen(shmuAdresa + '?page=1&id=webkamery') as stranka:
+  with urllib.request.urlopen(shmuWebAdresa + '?page=1&id=webkamery') as stranka:
     parser.feed(stranka.read().decode('utf-8'))
   return parser.kamery
 
-def dajObrazkyKamery(kameraLink):
-  parser = ObrazkyParser()
-  with urllib.request.urlopen(shmuAdresa + kameraLink + '&c=360') as stranka:
+def dajObrazkyKamery(kamera):
+  parser = ObrazkyParser(kamera)
+  with urllib.request.urlopen(shmuWebAdresa + kamera.link + '&c=360') as stranka:
     parser.feed(stranka.read().decode('utf-8'))
   return parser.obrazky
+
+def dajObrazok(obrazok):
+  with urllib.request.urlopen(shmuAdresa + obrazok.link) as obrazokData:
+    return PIL.Image.open(obrazokData)
+
+def vytvorVideo(obrazky, videoSubor, framerate):
+  video = (ffmpeg
+    .input('pipe:', format='rawvideo', pix_fmt='rgb24', s='{}x{}'.format(*obrazky[0].size), framerate=framerate)
+    .output(videoSubor)
+    .overwrite_output()
+    .run_async(pipe_stdin=True)
+    )
+  for obrazok in obrazky:
+    video.stdin.write(obrazok.tobytes())
+  video.stdin.close()
+  video.wait()
+
+
+class Kamera:
+  def __init__(self, link, nazov):
+    self.link = link
+    self.nazov = nazov
+    self.id = re.match(r'\?page=1&id=webkamery&kamera=(.*)', self.link).group(1)
+
+  def dajCestuObrazku(self):
+    return 'data/datawebcam/' + self.id + '/'
+
+class Obrazok:
+  def __init__(self, kamera, data):
+    self.nazov = data[0]
+    self.link = kamera.dajCestuObrazku() + data[1]
+
+  def __eq__(self, value):
+    return self.nazov == value.nazov and self.link == value.link
 
 
 def dajAtribut(attrs, attrNazov):
@@ -48,14 +84,15 @@ class KameraParser (html.parser.HTMLParser):
 
   def handle_data(self, data):
     if self.aktualnaKamera is not None and self.vNazveKamery:
-      self.kamery.append((self.aktualnaKamera, data))
+      self.kamery.append(Kamera(self.aktualnaKamera, data))
       self.aktualnaKamera = None
       self.vNazveKamery = False
 
 
 class ObrazkyParser (html.parser.HTMLParser):
-  def __init__(self):
+  def __init__(self, kamera):
     super(ObrazkyParser, self).__init__()
+    self.kamera = kamera
     self.obrazky = []
     self.vSkripte = False
 
@@ -74,14 +111,11 @@ class ObrazkyParser (html.parser.HTMLParser):
       while start >= 0:
         najdene = vzor.search(data, start)
         if najdene is not None:
-          self.obrazky.append((najdene.group(2), najdene.group(1)))
+          self.obrazky.append(Obrazok(self.kamera, najdene.groups()))
           start = najdene.span()[1]
         else:
           start = -1
 
 
-shmuAdresa = 'http://www.shmu.sk/sk/'
-
-if __name__ == '__main__':
-  rslt = urllib.request.urlopen('http://www.shmu.sk/sk/?page=1&id=webkamery')
-  pass
+shmuAdresa = 'http://www.shmu.sk/'
+shmuWebAdresa = shmuAdresa + 'sk/'
