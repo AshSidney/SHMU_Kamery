@@ -34,10 +34,15 @@ def vytvorVideo(obrazky, videoSubor, framerate):
 
 
 class Kamera:
-  def __init__(self, link, nazov):
+  def __init__(self, link):
     self.link = link
-    self.nazov = nazov
     self.id = re.match(r'\?page=1&id=webkamery&kamera=(.*)', self.link).group(1)
+
+  def nastavNazov(self, nazov):
+    self.nazov = nazov
+
+  def nastavNahlad(self, nahladLink):
+    self.nahlad = dajObrazok(Obrazok(self, ('', nahladLink)))
 
   def dajCestuObrazku(self):
     return 'data/datawebcam/' + self.id + '/'
@@ -45,7 +50,9 @@ class Kamera:
 class Obrazok:
   def __init__(self, kamera, data):
     self.nazov = data[0]
-    self.link = kamera.dajCestuObrazku() + data[1]
+    cestaObrazku = kamera.dajCestuObrazku()
+    najdenyLink = re.search(cestaObrazku + r'(\d{8}_\d{6}.jpg)', data[1])
+    self.link = cestaObrazku + (najdenyLink.group(1) if najdenyLink is not None else data[1])
 
   def __eq__(self, value):
     return self.nazov == value.nazov and self.link == value.link
@@ -63,8 +70,8 @@ class KameraParser (html.parser.HTMLParser):
     super(KameraParser, self).__init__()
     self.kamery = []
     self.kameraDivPocet = 0
-    self.aktualnaKamera = None
     self.vNazveKamery = False
+    self.aktualnaKamera = None
 
   def handle_starttag(self, tag, attrs):
     if self.kameraDivPocet == 0:
@@ -74,18 +81,23 @@ class KameraParser (html.parser.HTMLParser):
       if tag == 'div':
         self.kameraDivPocet += 1
       elif tag == 'a':
-        self.aktualnaKamera = dajAtribut(attrs, 'href')
+        self.aktualnaKamera = Kamera(dajAtribut(attrs, 'href'))
       elif tag == 'h3':
         self.vNazveKamery = True
+      elif tag == 'img':
+        if self.aktualnaKamera is not None:
+          self.aktualnaKamera.nastavNahlad(dajAtribut(attrs, 'src'))
 
   def handle_endtag(self, tag):
     if tag == 'div' and self.kameraDivPocet > 0:
       self.kameraDivPocet -= 1
+      if self.aktualnaKamera is not None:
+        self.kamery.append(self.aktualnaKamera)
+        self.aktualnaKamera = None
 
   def handle_data(self, data):
     if self.aktualnaKamera is not None and self.vNazveKamery:
-      self.kamery.append(Kamera(self.aktualnaKamera, data))
-      self.aktualnaKamera = None
+      self.aktualnaKamera.nastavNazov(data)
       self.vNazveKamery = False
 
 

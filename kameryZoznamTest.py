@@ -15,6 +15,9 @@ class Test_Kamery(unittest.TestCase):
       self.assertTrue(kamera.link.startswith('?page=1&id=webkamery&kamera=hdcam'))
       self.assertIsInstance(kamera.nazov, str)
       self.assertGreater(len(kamera.nazov), 0)
+      self.assertGreater(kamera.nahlad.width, 512)
+      self.assertGreater(kamera.nahlad.height, 400)
+      self.assertEqual(kamera.nahlad.format, 'JPEG')
 
   def test_kameraObrazky(self):
     kamery = SHMU_Kamery.dajZoznamKamier()
@@ -66,7 +69,7 @@ class Test_NastrojeParsera(unittest.TestCase):
     self.assertEqual(SHMU_Kamery.dajAtribut(attrs, 'invalid'), None)
 
   def test_spracujObrazky(self):
-    testKamera = SHMU_Kamery.Kamera('?page=1&id=webkamery&kamera=hdcam06', 'Pokusna kamera')
+    testKamera = SHMU_Kamery.Kamera('?page=1&id=webkamery&kamera=hdcam06')
     parser = SHMU_Kamery.ObrazkyParser(testKamera)
     parser.vSkripte = True
     obrazky = parser.handle_data('''  var img_dts = new Array(); var img_files = new Array();
