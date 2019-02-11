@@ -42,7 +42,8 @@ class Kamera:
     self.nazov = nazov
 
   def nastavNahlad(self, nahladLink):
-    self.nahlad = dajObrazok(Obrazok(self, ('', nahladLink)))
+    nahlad = dajObrazok(Obrazok(self, ('', nahladLink)))
+    self.nahlad = nahlad.resize((256, int(nahlad.height * 256 / nahlad.width)), PIL.Image.LANCZOS)
 
   def dajCestuObrazku(self):
     return 'data/datawebcam/' + self.id + '/'
@@ -67,7 +68,7 @@ def dajAtribut(attrs, attrNazov):
 
 class KameraParser (html.parser.HTMLParser):
   def __init__(self):
-    super(KameraParser, self).__init__()
+    super().__init__()
     self.kamery = []
     self.kameraDivPocet = 0
     self.vNazveKamery = False
@@ -103,7 +104,7 @@ class KameraParser (html.parser.HTMLParser):
 
 class ObrazkyParser (html.parser.HTMLParser):
   def __init__(self, kamera):
-    super(ObrazkyParser, self).__init__()
+    super().__init__()
     self.kamera = kamera
     self.obrazky = []
     self.vSkripte = False

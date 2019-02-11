@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>0943b01a-b1db-4188-8486-cbd1ae55ffd4</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>SHMU_Kamery.py</StartupFile>
+    <StartupFile>gui.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -22,6 +22,9 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="gui.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="kameryZoznamTest.py">
       <SubType>Code</SubType>
     </Compile>

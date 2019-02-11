@@ -15,9 +15,10 @@ class Test_Kamery(unittest.TestCase):
       self.assertTrue(kamera.link.startswith('?page=1&id=webkamery&kamera=hdcam'))
       self.assertIsInstance(kamera.nazov, str)
       self.assertGreater(len(kamera.nazov), 0)
-      self.assertGreater(kamera.nahlad.width, 512)
-      self.assertGreater(kamera.nahlad.height, 400)
-      self.assertEqual(kamera.nahlad.format, 'JPEG')
+      self.assertEqual(kamera.nahlad.width, 256)
+      self.assertGreater(kamera.nahlad.height, 180)
+      self.assertLess(kamera.nahlad.height, 200)
+      self.assertEqual(kamera.nahlad.mode, 'RGB')
 
   def test_kameraObrazky(self):
     kamery = SHMU_Kamery.dajZoznamKamier()
