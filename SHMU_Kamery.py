@@ -10,6 +10,11 @@ def dajZoznamKamier():
     parser.feed(stranka.read().decode('utf-8'))
   return parser.kamery
 
+def dajKamerySNahladmi():
+  for kamera in dajZoznamKamier():
+    kamera.ziskajNahlad()
+    yield kamera
+
 def dajObrazkyKamery(kamera):
   parser = ObrazkyParser(kamera)
   with urllib.request.urlopen(shmuWebAdresa + kamera.link + '&c=360') as stranka:
@@ -42,7 +47,10 @@ class Kamera:
     self.nazov = nazov
 
   def nastavNahlad(self, nahladLink):
-    nahlad = dajObrazok(Obrazok(self, ('', nahladLink)))
+    self.nahladLink = Obrazok(self, ('', nahladLink))
+
+  def ziskajNahlad(self):
+    nahlad = dajObrazok(self.nahladLink)
     self.nahlad = nahlad.resize((256, int(nahlad.height * 256 / nahlad.width)), PIL.Image.LANCZOS)
 
   def dajCestuObrazku(self):

@@ -15,6 +15,16 @@ class Test_Kamery(unittest.TestCase):
       self.assertTrue(kamera.link.startswith('?page=1&id=webkamery&kamera=hdcam'))
       self.assertIsInstance(kamera.nazov, str)
       self.assertGreater(len(kamera.nazov), 0)
+      self.assertIsNotNone(kamera.nahladLink)
+      self.assertIsNotNone(re.match(r'data/datawebcam/' + kamera.id + r'/\d{8}_\d{6}.jpg', kamera.nahladLink.link))
+
+  def test_kamerySNahladmi(self):
+    for kamera in SHMU_Kamery.dajKamerySNahladmi():
+      self.assertIsInstance(kamera, SHMU_Kamery.Kamera)
+      self.assertTrue(kamera.id.startswith('hdcam'))
+      self.assertTrue(kamera.link.startswith('?page=1&id=webkamery&kamera=hdcam'))
+      self.assertIsInstance(kamera.nazov, str)
+      self.assertGreater(len(kamera.nazov), 0)
       self.assertEqual(kamera.nahlad.width, 256)
       self.assertGreater(kamera.nahlad.height, 180)
       self.assertLess(kamera.nahlad.height, 200)
