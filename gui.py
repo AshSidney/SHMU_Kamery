@@ -108,12 +108,46 @@ class AktualnaKamera(tkinter.Frame):
     self.grid(row=0, column=0)
     self.guiNazov = tkinter.ttk.Label(self, text=self.kamera.nazov)
     self.obrazky = SHMU_Kamery.dajObrazkyKamery(self.kamera)
-    self.obrazok = PIL.ImageTk.PhotoImage(SHMU_Kamery.dajObrazok(self.obrazky[-1]))
-    self.guiObrazok = tkinter.ttk.Label(self, image=self.obrazok)
-    self.casovaOs = tkinter.ttk.Scale(self, orient=tkinter.HORIZONTAL, from_=0, to=len(self.obrazky)-1)
+    self.aktualnyObrazok = PIL.ImageTk.PhotoImage(SHMU_Kamery.dajObrazok(self.obrazky[-1]))
+    self.guiObrazok = tkinter.ttk.Label(self, image=self.aktualnyObrazok)
+    self.casovaOs = tkinter.Scale(self, orient=tkinter.HORIZONTAL, from_=0, to=len(self.obrazky)-1,
+      length=self.aktualnyObrazok.width(), command=self.zmenaPozicie)
     self.guiNazov.grid(row=0, column=0)
     self.guiObrazok.grid(row=1, column=0)
     self.casovaOs.grid(row=2, column=0)
+
+    self.vsetkyObrazky = []
+    self.udalosti = queue.Queue()
+    self.nacitanieObrazkov = threading.Thread(target=self.nacitajObrazky)
+    self.nacitanieObrazkov.start()
+    self.spracujUdalosti()
+
+  def schovaj(self):
+    self.grid_forget()
+
+  def spracujUdalosti(self):
+    while not self.udalosti.empty():
+      self.ulozObrazok(self.udalosti.get())
+    self.after(200, self.spracujUdalosti)
+
+  def nacitajObrazky(self):
+    for obrazok in self.obrazky:
+      self.udalosti.put(SHMU_Kamery.dajObrazok(obrazok))
+    self.udalosti.put(None)
+
+  def ulozObrazok(self, obrazok):
+    if obrazok is None:
+      self.nacitanieObrazkov.join()
+    else:
+      self.vsetkyObrazky.append(PIL.ImageTk.PhotoImage(obrazok))
+
+  def zmenaPozicie(self, event):
+    index = self.casovaOs.get()
+    if index < len(self.vsetkyObrazky):
+      self.aktualnyObrazok = self.vsetkyObrazky[index]
+    else:
+      self.aktualnyObrazok = PIL.ImageTk.PhotoImage(SHMU_Kamery.dajObrazok(self.obrazky[index]))
+    self.guiObrazok.configure(image=self.aktualnyObrazok)
 
 
 if __name__ == '__main__':
