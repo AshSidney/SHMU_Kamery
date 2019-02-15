@@ -16,16 +16,50 @@ class GUIApp(tkinter.Frame):
     self.grid_rowconfigure(0, weight=1)
     self.grid_columnconfigure(0, weight=1)
     self.kamery = ZoznamKamier(self)
+    self.aktualnaKamera = None
+
+  def ukonci(self):
+    self.kamery.ukonci()
+    if self.aktualnaKamera is not None:
+      self.aktualnaKamera.ukonci()
     
   def nastavKameru(self, kamera):
-    print('vybrana kamera', kamera.nazov)
     self.kamery.schovaj()
     self.aktualnaKamera = AktualnaKamera(self, kamera)
 
 
-class ZoznamKamier(tkinter.Canvas):
+class SpracovanieVPozadi:
+  def __init__(self):
+    self.udalosti = queue.Queue()
+    self.prerusenieVlakna = False
+    self.vlakno = threading.Thread(target=self.pracaVPozadi)
+    self.vlakno.start()
+    self.spracujUdalosti()
+
+  def ukonci(self):
+    self.prerusenieVlakna = True
+
+  def spracujUdalosti(self):
+    while not self.udalosti.empty():
+      udalost = self.udalosti.get()
+      if udalost is None:
+        self.vlakno.join()
+      else:
+        self.spracujData(udalost)
+    self.after(200, self.spracujUdalosti)
+
+  def pracaVPozadi(self):
+    self.udalosti.put(None)
+
+  def spracujData(self, udalost):
+    pass
+
+
+class ZoznamKamier(tkinter.Canvas, SpracovanieVPozadi):
   def __init__(self, master):
-    super().__init__(master, width=800, height=600)
+    tkinter.Canvas.__init__(self, master, width=800, height=600)
+    self.guiKamery = []
+    SpracovanieVPozadi.__init__(self)
     self.okno = tkinter.Frame(self)
     self.posuvnik = tkinter.Scrollbar(master, orient=tkinter.VERTICAL, command=self.yview)
     self.configure(yscrollcommand=self.posuvnik.set)
@@ -35,12 +69,6 @@ class ZoznamKamier(tkinter.Canvas):
     self.bind_all('<MouseWheel>', self.posunKolieskom)
     self.zobraz()
 
-    self.guiKamery = []
-    self.udalosti = queue.Queue()
-    self.nacitanieKamier = threading.Thread(target=self.nacitajKamery)
-    self.nacitanieKamier.start()
-    self.spracujUdalosti()
-
   def zobraz(self):
     self.grid(row=0, column=0, sticky=tkinter.NSEW)
     self.posuvnik.grid(row=0, column=1, sticky=tkinter.NSEW)
@@ -49,20 +77,14 @@ class ZoznamKamier(tkinter.Canvas):
     self.grid_forget()
     self.posuvnik.grid_forget()
 
-  def spracujUdalosti(self):
-    while not self.udalosti.empty():
-      self.vytvorKameru(self.udalosti.get())
-    self.after(200, self.spracujUdalosti)
-
-  def nacitajKamery(self):
+  def pracaVPozadi(self):
     for kamera in SHMU_Kamery.dajKamerySNahladmi():
       self.udalosti.put(kamera)
+      if self.prerusenieVlakna:
+        break
     self.udalosti.put(None)
 
-  def vytvorKameru(self, kamera):
-    if kamera is None:
-      self.nacitanieKamier.join()
-      return
+  def spracujData(self, kamera):
     self.guiKamery.append(KameraNahlad(self.okno, kamera,self.master))
     self.konfiguraciaKamier(collections.namedtuple('Event', ('width', 'height'))(self.winfo_width(), self.winfo_height()))
 
@@ -101,45 +123,43 @@ class KameraNahlad(tkinter.Frame):
     self.aplikacia.nastavKameru(self.kamera)
 
 
-class AktualnaKamera(tkinter.Frame):
+class AktualnaKamera(tkinter.Frame, SpracovanieVPozadi):
   def __init__(self, master, kamera):
-    super().__init__(master)
+    tkinter.Frame.__init__(self, master)
     self.kamera = kamera
-    self.grid(row=0, column=0)
-    self.guiNazov = tkinter.ttk.Label(self, text=self.kamera.nazov)
     self.obrazky = SHMU_Kamery.dajObrazkyKamery(self.kamera)
     self.aktualnyObrazok = PIL.ImageTk.PhotoImage(SHMU_Kamery.dajObrazok(self.obrazky[-1]))
+    self.vsetkyObrazky = []
+    SpracovanieVPozadi.__init__(self)
+    self.grid(row=0, column=0)
+    self.guiNazov = tkinter.ttk.Label(self, text=self.kamera.nazov)
     self.guiObrazok = tkinter.ttk.Label(self, image=self.aktualnyObrazok)
+    sirkaObrazku = self.aktualnyObrazok.width()
     self.casovaOs = tkinter.Scale(self, orient=tkinter.HORIZONTAL, from_=0, to=len(self.obrazky)-1,
-      length=self.aktualnyObrazok.width(), command=self.zmenaPozicie)
+      length=sirkaObrazku, command=self.zmenaPozicie)
+    self.casovaOs.set(len(self.obrazky)-1)
+    self.stavNacitania = tkinter.ttk.Progressbar(self, orient=tkinter.HORIZONTAL, maximum=len(self.obrazky),
+      length=sirkaObrazku/4, mode='determinate')
     self.guiNazov.grid(row=0, column=0)
     self.guiObrazok.grid(row=1, column=0)
     self.casovaOs.grid(row=2, column=0)
-
-    self.vsetkyObrazky = []
-    self.udalosti = queue.Queue()
-    self.nacitanieObrazkov = threading.Thread(target=self.nacitajObrazky)
-    self.nacitanieObrazkov.start()
-    self.spracujUdalosti()
+    self.stavNacitania.grid(row=3, column=0)
 
   def schovaj(self):
     self.grid_forget()
 
-  def spracujUdalosti(self):
-    while not self.udalosti.empty():
-      self.ulozObrazok(self.udalosti.get())
-    self.after(200, self.spracujUdalosti)
-
-  def nacitajObrazky(self):
+  def pracaVPozadi(self):
     for obrazok in self.obrazky:
       self.udalosti.put(SHMU_Kamery.dajObrazok(obrazok))
+      if self.prerusenieVlakna:
+        break
     self.udalosti.put(None)
 
-  def ulozObrazok(self, obrazok):
-    if obrazok is None:
-      self.nacitanieObrazkov.join()
-    else:
-      self.vsetkyObrazky.append(PIL.ImageTk.PhotoImage(obrazok))
+  def spracujData(self, obrazok):
+    self.vsetkyObrazky.append(PIL.ImageTk.PhotoImage(obrazok))
+    self.stavNacitania.step(1)
+    if len(self.vsetkyObrazky) == len(self.obrazky):
+      self.stavNacitania.grid_forget()
 
   def zmenaPozicie(self, event):
     index = self.casovaOs.get()
@@ -154,3 +174,4 @@ if __name__ == '__main__':
   root = tkinter.Tk()
   app = GUIApp(master=root)
   app.mainloop()
+  app.ukonci()
