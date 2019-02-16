@@ -59,23 +59,24 @@ class ZoznamKamier(tkinter.Canvas, SpracovanieVPozadi):
   def __init__(self, master):
     tkinter.Canvas.__init__(self, master, width=800, height=600)
     self.guiKamery = []
-    SpracovanieVPozadi.__init__(self)
     self.okno = tkinter.Frame(self)
     self.posuvnik = tkinter.Scrollbar(master, orient=tkinter.VERTICAL, command=self.yview)
     self.configure(yscrollcommand=self.posuvnik.set)
     self.create_window((0,0), window=self.okno, anchor=tkinter.NW, tags='self.okno')
     self.bind('<Configure>', self.konfiguraciaKamier)
     self.okno.bind('<Configure>', self.konfiguraciaPosunu)
-    self.bind_all('<MouseWheel>', self.posunKolieskom)
     self.zobraz()
+    SpracovanieVPozadi.__init__(self)
 
   def zobraz(self):
     self.grid(row=0, column=0, sticky=tkinter.NSEW)
     self.posuvnik.grid(row=0, column=1, sticky=tkinter.NSEW)
+    self.bind_all('<MouseWheel>', self.posunKolieskom)
 
   def schovaj(self):
     self.grid_forget()
     self.posuvnik.grid_forget()
+    self.unbind_all('<MouseWheel>')
 
   def pracaVPozadi(self):
     for kamera in SHMU_Kamery.dajKamerySNahladmi():
@@ -127,47 +128,61 @@ class AktualnaKamera(tkinter.Frame, SpracovanieVPozadi):
   def __init__(self, master, kamera):
     tkinter.Frame.__init__(self, master)
     self.kamera = kamera
-    self.obrazky = SHMU_Kamery.dajObrazkyKamery(self.kamera)
-    self.aktualnyObrazok = PIL.ImageTk.PhotoImage(SHMU_Kamery.dajObrazok(self.obrazky[-1]))
-    self.vsetkyObrazky = []
-    SpracovanieVPozadi.__init__(self)
+    self.nazvyObrazkov = SHMU_Kamery.dajObrazkyKamery(self.kamera)
+    self.vsetkyObrazky = [None] * len(self.nazvyObrazkov)
+    self.guiObrazky = [None] * len(self.nazvyObrazkov)
+    self.aktualnyObrazok = PIL.ImageTk.PhotoImage(SHMU_Kamery.dajObrazok(self.nazvyObrazkov[-1]))
     self.grid(row=0, column=0)
     self.guiNazov = tkinter.ttk.Label(self, text=self.kamera.nazov)
     self.guiObrazok = tkinter.ttk.Label(self, image=self.aktualnyObrazok)
-    sirkaObrazku = self.aktualnyObrazok.width()
-    self.casovaOs = tkinter.Scale(self, orient=tkinter.HORIZONTAL, from_=0, to=len(self.obrazky)-1,
-      length=sirkaObrazku, command=self.zmenaPozicie)
-    self.casovaOs.set(len(self.obrazky)-1)
-    self.stavNacitania = tkinter.ttk.Progressbar(self, orient=tkinter.HORIZONTAL, maximum=len(self.obrazky),
-      length=sirkaObrazku/4, mode='determinate')
-    self.guiNazov.grid(row=0, column=0)
-    self.guiObrazok.grid(row=1, column=0)
-    self.casovaOs.grid(row=2, column=0)
-    self.stavNacitania.grid(row=3, column=0)
+    self.casovaOs = tkinter.Scale(self, orient=tkinter.HORIZONTAL, from_=0, to=len(self.nazvyObrazkov)-1,
+      length=self.aktualnyObrazok.width(), command=self.zmenaPozicie)
+    self.casovaOs.set(len(self.nazvyObrazkov)-1)
+    self.zaciatok = tkinter.Entry(self)
+    self.zaciatok.insert(0, str(0))
+    self.koniec = tkinter.Entry(self)
+    self.koniec.insert(0, str(len(self.nazvyObrazkov) - 1))
+    self.videoTlacidlo = tkinter.Button(self, text='Vytvor video', command=self.vytvorVideo)
+    self.stavNacitania = tkinter.ttk.Progressbar(self, orient=tkinter.HORIZONTAL, maximum=len(self.nazvyObrazkov),
+      mode='determinate')
+    self.guiNazov.grid(row=0, column=0, columnspan=4)
+    self.guiObrazok.grid(row=1, column=0, columnspan=4)
+    self.casovaOs.grid(row=2, column=0, columnspan=4)
+    self.zaciatok.grid(row=3, column=0)
+    self.koniec.grid(row=3, column=1)
+    self.videoTlacidlo.grid(row=3, column=2)
+    self.stavNacitania.grid(row=3, column=3)
+    SpracovanieVPozadi.__init__(self)
 
   def schovaj(self):
     self.grid_forget()
 
   def pracaVPozadi(self):
-    for obrazok in self.obrazky:
-      self.udalosti.put(SHMU_Kamery.dajObrazok(obrazok))
+    for index in range(len(self.nazvyObrazkov) - 1, -1, -1):
+      self.udalosti.put((index, SHMU_Kamery.dajObrazok(self.nazvyObrazkov[index])))
       if self.prerusenieVlakna:
         break
     self.udalosti.put(None)
 
   def spracujData(self, obrazok):
-    self.vsetkyObrazky.append(PIL.ImageTk.PhotoImage(obrazok))
+    self.vsetkyObrazky[obrazok[0]] = obrazok[1]
+    self.guiObrazky[obrazok[0]] = PIL.ImageTk.PhotoImage(obrazok[1])
     self.stavNacitania.step(1)
-    if len(self.vsetkyObrazky) == len(self.obrazky):
+    if obrazok[0] == 0:
       self.stavNacitania.grid_forget()
 
   def zmenaPozicie(self, event):
     index = self.casovaOs.get()
-    if index < len(self.vsetkyObrazky):
-      self.aktualnyObrazok = self.vsetkyObrazky[index]
+    if self.guiObrazky[index] is not None:
+      self.aktualnyObrazok = self.guiObrazky[index]
     else:
-      self.aktualnyObrazok = PIL.ImageTk.PhotoImage(SHMU_Kamery.dajObrazok(self.obrazky[index]))
+      self.aktualnyObrazok = PIL.ImageTk.PhotoImage(SHMU_Kamery.dajObrazok(self.nazvyObrazkov[index]))
     self.guiObrazok.configure(image=self.aktualnyObrazok)
+
+  def vytvorVideo(self):
+    start = int(self.zaciatok.get())
+    koniec = int(self.koniec.get()) + 1
+    SHMU_Kamery.vytvorVideo(self.vsetkyObrazky[start:koniec], 'video.avi', 8)
 
 
 if __name__ == '__main__':
