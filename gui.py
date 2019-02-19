@@ -142,16 +142,20 @@ class AktualnaKamera(tkinter.Frame, SpracovanieVPozadi):
     self.zaciatok.insert(0, str(0))
     self.koniec = tkinter.Entry(self)
     self.koniec.insert(0, str(len(self.nazvyObrazkov) - 1))
+    self.zaciatokTlacidlo = tkinter.Button(self, text='Nastav začiatok', command=self.nastavZaciatok)
+    self.koniecTlacidlo = tkinter.Button(self, text='Nastav koniec', command=self.nastavKoniec)
     self.videoTlacidlo = tkinter.Button(self, text='Vytvor video', command=self.vytvorVideo)
     self.stavNacitania = tkinter.ttk.Progressbar(self, orient=tkinter.HORIZONTAL, maximum=len(self.nazvyObrazkov),
       mode='determinate')
-    self.guiNazov.grid(row=0, column=0, columnspan=4)
-    self.guiObrazok.grid(row=1, column=0, columnspan=4)
-    self.casovaOs.grid(row=2, column=0, columnspan=4)
-    self.zaciatok.grid(row=3, column=0)
-    self.koniec.grid(row=3, column=1)
-    self.videoTlacidlo.grid(row=3, column=2)
-    self.stavNacitania.grid(row=3, column=3)
+    self.guiNazov.grid(row=0, column=0, columnspan=6)
+    self.guiObrazok.grid(row=1, column=0, columnspan=6)
+    self.casovaOs.grid(row=2, column=0, columnspan=6)
+    self.zaciatokTlacidlo.grid(row=3, column=0)
+    self.zaciatok.grid(row=3, column=1)
+    self.koniec.grid(row=3, column=2)
+    self.koniecTlacidlo.grid(row=3, column=3)
+    self.videoTlacidlo.grid(row=3, column=4)
+    self.stavNacitania.grid(row=3, column=5)
     SpracovanieVPozadi.__init__(self)
 
   def schovaj(self):
@@ -183,6 +187,14 @@ class AktualnaKamera(tkinter.Frame, SpracovanieVPozadi):
     start = int(self.zaciatok.get())
     koniec = int(self.koniec.get()) + 1
     SHMU_Kamery.vytvorVideo(self.vsetkyObrazky[start:koniec], 'video.avi', 8)
+
+  def nastavZaciatok(self):
+    self.zaciatok.delete(0, tkinter.END)
+    self.zaciatok.insert(0, str(self.casovaOs.get()))
+
+  def nastavKoniec(self):
+    self.koniec.delete(0, tkinter.END)
+    self.koniec.insert(0, str(self.casovaOs.get()))
 
 
 if __name__ == '__main__':

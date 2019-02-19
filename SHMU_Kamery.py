@@ -28,7 +28,7 @@ def dajObrazok(obrazok):
 def vytvorVideo(obrazky, videoSubor, framerate):
   video = (ffmpeg
     .input('pipe:', format='rawvideo', pix_fmt='rgb24', s='{}x{}'.format(*obrazky[0].size), framerate=framerate)
-    .output(videoSubor, **{'b:v' : 800000})
+    .output(videoSubor, **{'b:v' : 1000000})
     .overwrite_output()
     .run_async(pipe_stdin=True)
     )
