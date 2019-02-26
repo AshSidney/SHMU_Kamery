@@ -57,7 +57,7 @@ class SpracovanieVPozadi:
 
 class ZoznamKamier(tkinter.Canvas, SpracovanieVPozadi):
   def __init__(self, master):
-    tkinter.Canvas.__init__(self, master, width=800, height=600)
+    tkinter.Canvas.__init__(self, master, width=1080, height=680)
     self.guiKamery = []
     self.okno = tkinter.Frame(self)
     self.posuvnik = tkinter.Scrollbar(master, orient=tkinter.VERTICAL, command=self.yview)
@@ -130,7 +130,6 @@ class AktualnaKamera(tkinter.Frame, SpracovanieVPozadi):
     self.kamera = kamera
     self.nazvyObrazkov = SHMU_Kamery.dajObrazkyKamery(self.kamera)
     self.vsetkyObrazky = [None] * len(self.nazvyObrazkov)
-    self.guiObrazky = [None] * len(self.nazvyObrazkov)
     self.aktualnyObrazok = PIL.ImageTk.PhotoImage(SHMU_Kamery.dajObrazok(self.nazvyObrazkov[-1]))
     self.grid(row=0, column=0)
     self.guiNazov = tkinter.ttk.Label(self, text=self.kamera.nazov)
@@ -138,27 +137,30 @@ class AktualnaKamera(tkinter.Frame, SpracovanieVPozadi):
     self.casovaOs = tkinter.Scale(self, orient=tkinter.HORIZONTAL, from_=0, to=len(self.nazvyObrazkov)-1,
       length=self.aktualnyObrazok.width(), command=self.zmenaPozicie)
     self.casovaOs.set(len(self.nazvyObrazkov)-1)
-    self.zaciatok = tkinter.Entry(self)
+    self.zaciatok = tkinter.Entry(self, width=4)
     self.zaciatok.insert(0, str(0))
-    self.koniec = tkinter.Entry(self)
+    self.koniec = tkinter.Entry(self, width=4)
     self.koniec.insert(0, str(len(self.nazvyObrazkov) - 1))
     self.zaciatokTlacidlo = tkinter.Button(self, text='Nastav začiatok', command=self.nastavZaciatok)
     self.koniecTlacidlo = tkinter.Button(self, text='Nastav koniec', command=self.nastavKoniec)
     self.videoTlacidlo = tkinter.Button(self, text='Vytvor video', command=self.vytvorVideo)
+    self.navratTlacidlo = tkinter.Button(self, text='Späť', command=self.naPrehladKamier)
     self.stavNacitania = tkinter.ttk.Progressbar(self, orient=tkinter.HORIZONTAL, maximum=len(self.nazvyObrazkov),
       mode='determinate')
-    self.guiNazov.grid(row=0, column=0, columnspan=6)
-    self.guiObrazok.grid(row=1, column=0, columnspan=6)
-    self.casovaOs.grid(row=2, column=0, columnspan=6)
-    self.zaciatokTlacidlo.grid(row=3, column=0)
-    self.zaciatok.grid(row=3, column=1)
-    self.koniec.grid(row=3, column=2)
-    self.koniecTlacidlo.grid(row=3, column=3)
-    self.videoTlacidlo.grid(row=3, column=4)
-    self.stavNacitania.grid(row=3, column=5)
+    self.guiNazov.grid(row=0, column=0, columnspan=3)
+    self.guiObrazok.grid(row=1, column=0, rowspan=4)
+    self.casovaOs.grid(row=5, column=0)
+    self.zaciatok.grid(row=1, column=1)
+    self.koniec.grid(row=1, column=2)
+    self.zaciatokTlacidlo.grid(row=2, column=1)
+    self.koniecTlacidlo.grid(row=2, column=2)
+    self.videoTlacidlo.grid(row=3, column=1, columnspan=2)
+    self.navratTlacidlo.grid(row=4, column=1, columnspan=2)
+    self.stavNacitania.grid(row=5, column=1, columnspan=2)
     SpracovanieVPozadi.__init__(self)
 
   def schovaj(self):
+    self.ukonci()
     self.grid_forget()
 
   def pracaVPozadi(self):
@@ -170,17 +172,14 @@ class AktualnaKamera(tkinter.Frame, SpracovanieVPozadi):
 
   def spracujData(self, obrazok):
     self.vsetkyObrazky[obrazok[0]] = obrazok[1]
-    self.guiObrazky[obrazok[0]] = PIL.ImageTk.PhotoImage(obrazok[1])
     self.stavNacitania.step(1)
     if obrazok[0] == 0:
       self.stavNacitania.grid_forget()
 
   def zmenaPozicie(self, event):
     index = self.casovaOs.get()
-    if self.guiObrazky[index] is not None:
-      self.aktualnyObrazok = self.guiObrazky[index]
-    else:
-      self.aktualnyObrazok = PIL.ImageTk.PhotoImage(SHMU_Kamery.dajObrazok(self.nazvyObrazkov[index]))
+    if self.vsetkyObrazky[index] is not None:
+      self.aktualnyObrazok = PIL.ImageTk.PhotoImage(self.vsetkyObrazky[index])
     self.guiObrazok.configure(image=self.aktualnyObrazok)
 
   def vytvorVideo(self):
@@ -195,6 +194,10 @@ class AktualnaKamera(tkinter.Frame, SpracovanieVPozadi):
   def nastavKoniec(self):
     self.koniec.delete(0, tkinter.END)
     self.koniec.insert(0, str(self.casovaOs.get()))
+
+  def naPrehladKamier(self):
+    self.schovaj()
+    self.master.kamery.zobraz()
 
 
 if __name__ == '__main__':
