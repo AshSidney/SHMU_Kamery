@@ -143,21 +143,28 @@ class AktualnaKamera(tkinter.Frame, SpracovanieVPozadi):
     self.koniec.insert(0, str(len(self.nazvyObrazkov) - 1))
     self.zaciatokTlacidlo = tkinter.Button(self, text='Nastav začiatok', command=self.nastavZaciatok)
     self.koniecTlacidlo = tkinter.Button(self, text='Nastav koniec', command=self.nastavKoniec)
+    self.rychlostPopis = tkinter.Label(self, text='Počet obrazkov/s')
+    self.rychlost = tkinter.Entry(self, width=2)
+    self.rychlost.insert(0, '8')
+    self.prehladTlacidlo = tkinter.Button(self, text='Prezri video', command=self.prezriVideo)
     self.videoTlacidlo = tkinter.Button(self, text='Vytvor video', command=self.vytvorVideo)
     self.navratTlacidlo = tkinter.Button(self, text='Späť', command=self.naPrehladKamier)
     self.stavNacitania = tkinter.ttk.Progressbar(self, orient=tkinter.HORIZONTAL, maximum=len(self.nazvyObrazkov),
       mode='determinate')
-    self.grid_rowconfigure(4, weight=1)
+    self.grid_rowconfigure(5, weight=1)
     self.guiNazov.grid(row=0, column=0, columnspan=3)
-    self.guiObrazok.grid(row=1, column=0, rowspan=4)
-    self.casovaOs.grid(row=5, column=0)
+    self.guiObrazok.grid(row=1, column=0, rowspan=5)
+    self.casovaOs.grid(row=6, column=0)
     self.zaciatok.grid(row=1, column=1, padx=4, pady=4)
     self.koniec.grid(row=1, column=2, padx=4, pady=4)
     self.zaciatokTlacidlo.grid(row=2, column=1, padx=4, pady=4)
     self.koniecTlacidlo.grid(row=2, column=2, padx=4, pady=4)
-    self.videoTlacidlo.grid(row=3, column=1, columnspan=2, padx=4, pady=4)
-    self.navratTlacidlo.grid(row=4, column=1, columnspan=2, sticky=tkinter.S, padx=4, pady=4)
-    self.stavNacitania.grid(row=5, column=1, columnspan=2)
+    self.rychlostPopis.grid(row=3, column=1, padx=4, pady=4)
+    self.rychlost.grid(row=3, column=2, padx=4, pady=4)
+    self.prehladTlacidlo.grid(row=4, column=1, padx=4, pady=4)
+    self.videoTlacidlo.grid(row=4, column=2, padx=4, pady=4)
+    self.navratTlacidlo.grid(row=5, column=1, columnspan=2, sticky=tkinter.S, padx=4, pady=4)
+    self.stavNacitania.grid(row=6, column=1, columnspan=2)
     SpracovanieVPozadi.__init__(self)
 
   def schovaj(self):
@@ -183,10 +190,21 @@ class AktualnaKamera(tkinter.Frame, SpracovanieVPozadi):
       self.aktualnyObrazok = PIL.ImageTk.PhotoImage(self.vsetkyObrazky[index])
     self.guiObrazok.configure(image=self.aktualnyObrazok)
 
+  def dajRychlost(self):
+    try:
+      return int(self.rychlost.get())
+    except:
+      self.rychlost.delete(0, tkinter.END)
+      self.rychlost.insert(0, '10')
+      return self.dajRychlost()
+
   def vytvorVideo(self):
     start = int(self.zaciatok.get())
     koniec = int(self.koniec.get()) + 1
-    SHMU_Kamery.vytvorVideo(self.vsetkyObrazky[start:koniec], 'video.avi', 8)
+    SHMU_Kamery.vytvorVideo(self.vsetkyObrazky[start:koniec], 'video.avi', self.dajRychlost())
+
+  def prezriVideo(self):
+    pass
 
   def nastavZaciatok(self):
     self.zaciatok.delete(0, tkinter.END)
