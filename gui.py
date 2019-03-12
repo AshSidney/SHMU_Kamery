@@ -190,21 +190,46 @@ class AktualnaKamera(tkinter.Frame, SpracovanieVPozadi):
       self.aktualnyObrazok = PIL.ImageTk.PhotoImage(self.vsetkyObrazky[index])
     self.guiObrazok.configure(image=self.aktualnyObrazok)
 
-  def dajRychlost(self):
+  def dajHodnotu(self, vstupnePole, defHodnota):
     try:
-      return int(self.rychlost.get())
+      return int(vstupnePole.get())
     except:
-      self.rychlost.delete(0, tkinter.END)
-      self.rychlost.insert(0, '10')
-      return self.dajRychlost()
+      vstupnePole.delete(0, tkinter.END)
+      vstupnePole.insert(0, str(defHodnota))
+      return defHodnota
+
+  def dajZaciatok(self):
+    return self.dajHodnotu(self.zaciatok, 0)
+
+  def dajKoniec(self):
+    return self.dajHodnotu(self.koniec, 359)
+
+  def dajRychlost(self):
+    return self.dajHodnotu(self.rychlost, 10)
 
   def vytvorVideo(self):
-    start = int(self.zaciatok.get())
-    koniec = int(self.koniec.get()) + 1
+    start = self.dajZaciatok()
+    koniec = self.dajKoniec() + 1
     SHMU_Kamery.vytvorVideo(self.vsetkyObrazky[start:koniec], 'video.avi', self.dajRychlost())
 
   def prezriVideo(self):
-    pass
+    self.prehladTlacidlo.configure(text='Zastav video', command=self.zastavVideo)
+    self.prehravanieVidea = True
+    self.posunVideo()
+
+  def posunVideo(self):
+    if not self.prehravanieVidea:
+      return
+    index = self.casovaOs.get() + 1
+    if index > self.dajKoniec():
+      index = self.dajZaciatok()
+    self.casovaOs.set(index)
+    self.zmenaPozicie(None)
+    self.after(int(1000 / self.dajRychlost()), self.posunVideo)
+
+  def zastavVideo(self):
+    self.prehladTlacidlo.configure(text='Prezri video', command=self.prezriVideo)
+    self.prehravanieVidea = False
 
   def nastavZaciatok(self):
     self.zaciatok.delete(0, tkinter.END)
