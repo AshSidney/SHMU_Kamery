@@ -1,10 +1,13 @@
 import tkinter
 import tkinter.ttk
+import tkinter.filedialog
 import PIL.ImageTk
 import threading
 import queue
 import collections
+import os.path
 import SHMU_Kamery
+import json
 
 
 class GUIApp(tkinter.Frame): 
@@ -17,16 +20,28 @@ class GUIApp(tkinter.Frame):
     self.grid_columnconfigure(0, weight=1)
     self.kamery = ZoznamKamier(self)
     self.aktualnaKamera = None
+    self.nastavenia = Nastavenia('config.json')
 
   def ukonci(self):
     self.kamery.ukonci()
     if self.aktualnaKamera is not None:
       self.aktualnaKamera.ukonci()
+    self.nastavenia.uloz()
     
   def nastavKameru(self, kamera):
     self.kamery.schovaj()
     self.aktualnaKamera = AktualnaKamera(self, kamera)
 
+class Nastavenia:
+  def __init__(self, subor):
+    self.subor = subor
+    try:
+      self.data = json.load(open(self.subor, 'r'))
+    except:
+      self.data = {}
+
+  def uloz(self):
+    json.dump(self.data, open(self.subor, 'w'))
 
 class SpracovanieVPozadi:
   def __init__(self):
@@ -128,6 +143,7 @@ class AktualnaKamera(tkinter.Frame, SpracovanieVPozadi):
   def __init__(self, master, kamera):
     tkinter.Frame.__init__(self, master)
     self.kamera = kamera
+    self.videoVlakno = None
     self.nazvyObrazkov = SHMU_Kamery.dajObrazkyKamery(self.kamera)
     self.vsetkyObrazky = [None] * len(self.nazvyObrazkov)
     self.aktualnyObrazok = PIL.ImageTk.PhotoImage(SHMU_Kamery.dajObrazok(self.nazvyObrazkov[-1]))
@@ -171,6 +187,13 @@ class AktualnaKamera(tkinter.Frame, SpracovanieVPozadi):
     self.ukonci()
     self.grid_forget()
 
+  def spracujUdalosti(self):
+    if self.videoVlakno is not None and not self.videoVlakno.zapisBezi:
+      self.videoVlakno.join()
+      self.videoVlakno = None
+      self.stavNacitania.grid_forget()
+    SpracovanieVPozadi.spracujUdalosti(self)
+
   def pracaVPozadi(self):
     for index in range(len(self.nazvyObrazkov) - 1, -1, -1):
       self.udalosti.put((index, SHMU_Kamery.dajObrazok(self.nazvyObrazkov[index])))
@@ -208,9 +231,22 @@ class AktualnaKamera(tkinter.Frame, SpracovanieVPozadi):
     return self.dajHodnotu(self.rychlost, 10)
 
   def vytvorVideo(self):
+    adresar = self.master.nastavenia.data['adresar'] if 'adresar' in self.master.nastavenia.data else '~/Videos'
+    nazovVidea = tkinter.filedialog.asksaveasfilename(initialdir=adresar, title='Vyber video subor',
+      filetypes = (('avi subory','*.avi'),('vsetky subory','*.*')))
+    if nazovVidea == '':
+      return
+    nazov, pripona = os.path.splitext(nazovVidea)
+    if pripona == '':
+      nazovVidea += '.avi'
+    self.master.nastavenia.data['adresar'] = os.path.split(nazov)[0]
     start = self.dajZaciatok()
     koniec = self.dajKoniec() + 1
-    SHMU_Kamery.vytvorVideo(self.vsetkyObrazky[start:koniec], 'video.avi', self.dajRychlost())
+    if self.videoVlakno is None:
+      self.videoVlakno = VideoZapis(self.vsetkyObrazky[start:koniec], nazovVidea, self.dajRychlost())
+      self.stavNacitania = tkinter.ttk.Progressbar(self, orient=tkinter.HORIZONTAL, mode='indeterminate')
+      self.stavNacitania.grid(row=6, column=1, columnspan=2)
+      self.stavNacitania.start()
 
   def prezriVideo(self):
     self.prehladTlacidlo.configure(text='Zastav video', command=self.zastavVideo)
@@ -242,6 +278,20 @@ class AktualnaKamera(tkinter.Frame, SpracovanieVPozadi):
   def naPrehladKamier(self):
     self.schovaj()
     self.master.kamery.zobraz()
+
+
+class VideoZapis(threading.Thread):
+  def __init__(self, obrazky, nazovVidea, rychlost):
+    super().__init__()
+    self.obrazky = obrazky
+    self.nazovVidea = nazovVidea
+    self.rychlost = rychlost
+    self.zapisBezi = True
+    self.start()
+
+  def run(self):
+    SHMU_Kamery.vytvorVideo(self.obrazky, self.nazovVidea, self.rychlost)
+    self.zapisBezi = False
 
 
 if __name__ == '__main__':
