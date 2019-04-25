@@ -22,8 +22,12 @@ def dajObrazkyKamery(kamera):
   return parser.obrazky
 
 def dajObrazok(obrazok):
-  with urllib.request.urlopen(shmuAdresa + obrazok.link) as obrazokData:
-    return PIL.Image.open(obrazokData)
+  for retry in range(16):
+    try:
+      with urllib.request.urlopen(shmuAdresa + obrazok.link) as obrazokData:
+        return PIL.Image.open(obrazokData)
+    except:
+      pass
 
 def vytvorVideo(obrazky, videoSubor, framerate):
   video = (ffmpeg
