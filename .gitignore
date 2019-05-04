@@ -261,4 +261,6 @@ __pycache__/
 *.pyc
 
 testdata/
-/config.json
+dist/
+config.json
+*.spec
