@@ -62,6 +62,12 @@ class Test_Kamery(unittest.TestCase):
     self.assertEqual(float(videoData['duration']), 2.5)
     self.assertEqual(int(videoData['nb_frames']), 25)
 
+  def test_vytvorGif(self):
+    if os.path.exists('testdata/testAnim.gif'):
+      os.unlink('testdata/testAnim.gif')
+    obrazky = [generujObrazok(param) for param in range(25)]
+    SHMU_Kamery.vytvorVideo(obrazky, 'testdata/testAnim.gif', 10)
+    self.assertTrue(os.path.exists('testdata/testAnim.gif'))
 
 def generujObrazok(param):
   pozicia = abs(param % 100 - 50)

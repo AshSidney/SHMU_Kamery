@@ -1,6 +1,7 @@
 import urllib.request
 import html.parser
 import re
+import os.path
 import PIL.Image
 import ffmpeg
 
@@ -41,6 +42,15 @@ def vytvorVideo(obrazky, videoSubor, framerate):
   video.stdin.close()
   video.wait()
 
+def vytvorGif(obrazky, subor, framerate):
+  pass
+
+def vytvorAnimaciu(obrazky, subor, framerate):
+  pripona = os.path.splitext()
+  if pripona == '.gif':
+    vytvorGif(obrazky, subor, framerate)
+  else:
+    vytvorVideo(obrazky, subor, framerate)
 
 class Kamera:
   def __init__(self, link):

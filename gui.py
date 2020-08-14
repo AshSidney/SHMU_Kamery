@@ -233,7 +233,7 @@ class AktualnaKamera(tkinter.Frame, SpracovanieVPozadi):
   def vytvorVideo(self):
     adresar = self.master.nastavenia.data['adresar'] if 'adresar' in self.master.nastavenia.data else '~/Videos'
     nazovVidea = tkinter.filedialog.asksaveasfilename(initialdir=adresar, title='Vyber video subor',
-      filetypes = (('avi subory','*.avi'),('vsetky subory','*.*')))
+      filetypes = (('avi subory','*.avi'),('gif subory','*.gif'),('vsetky subory','*.*')))
     if nazovVidea == '':
       return
     nazov, pripona = os.path.splitext(nazovVidea)
@@ -290,7 +290,7 @@ class VideoZapis(threading.Thread):
     self.start()
 
   def run(self):
-    SHMU_Kamery.vytvorVideo(self.obrazky, self.nazovVidea, self.rychlost)
+    SHMU_Kamery.vytvorAnimaciu(self.obrazky, self.nazovVidea, self.rychlost)
     self.zapisBezi = False
 
 
