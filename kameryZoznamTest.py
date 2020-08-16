@@ -2,6 +2,7 @@ import unittest
 import SHMU_Kamery
 import re
 import PIL.Image
+import os
 import os.path
 import ffmpeg
 
@@ -49,12 +50,11 @@ class Test_Kamery(unittest.TestCase):
     self.assertEqual(obrazok.format, 'JPEG')
 
   def test_vytvorVideo(self):
-    if os.path.exists('testdata/testVideo.avi'):
-      os.unlink('testdata/testVideo.avi')
+    subor = pripravTestZlozku('testVideo.avi')
     obrazky = [generujObrazok(param) for param in range(25)]
-    SHMU_Kamery.vytvorVideo(obrazky, 'testdata/testVideo.avi', 10)
-    self.assertTrue(os.path.exists('testdata/testVideo.avi'))
-    videoTest = ffmpeg.probe('testdata/testVideo.avi')
+    SHMU_Kamery.vytvorAnimaciu(obrazky, subor, AnimParametre(10))
+    self.assertTrue(os.path.exists(subor))
+    videoTest = ffmpeg.probe(subor)
     videoData = next((video for video in videoTest['streams'] if video['codec_type'] == 'video'), None)
     self.assertEqual(int(videoData['width']), 300)
     self.assertEqual(int(videoData['height']), 200)
@@ -63,11 +63,16 @@ class Test_Kamery(unittest.TestCase):
     self.assertEqual(int(videoData['nb_frames']), 25)
 
   def test_vytvorGif(self):
-    if os.path.exists('testdata/testAnim.gif'):
-      os.unlink('testdata/testAnim.gif')
+    subor = pripravTestZlozku('testAnim.gif')
     obrazky = [generujObrazok(param) for param in range(25)]
-    SHMU_Kamery.vytvorVideo(obrazky, 'testdata/testAnim.gif', 10)
+    SHMU_Kamery.vytvorAnimaciu(obrazky, subor, AnimParametre(10, 500, 4))
     self.assertTrue(os.path.exists('testdata/testAnim.gif'))
+    gifImage = PIL.Image.open(subor)
+    self.assertEqual(gifImage.size, (300, 200))
+    gifImage.seek(24)
+    self.assertEqual(gifImage.tell(), 24)
+    with self.assertRaises(EOFError):
+      gifImage.seek(25)
 
 def generujObrazok(param):
   pozicia = abs(param % 100 - 50)
@@ -76,6 +81,31 @@ def generujObrazok(param):
     for y in range(80, 120):
       obrazok.putpixel((x, y), 0xff0000)
   return obrazok
+
+def pripravTestZlozku(subor):
+  zlozka = 'testData'
+  if not os.path.exists(zlozka):
+    os.mkdir(zlozka)
+  suborVZlozke = os.path.join(zlozka, subor)
+  if os.path.exists(suborVZlozke):
+    os.unlink(suborVZlozke)
+  return suborVZlozke
+
+class AnimParametre:
+  def __init__(self, rychlost, koncovyInterval=0, opakovania=1):
+    self.rychlost = rychlost
+    self.koncovyInterval = koncovyInterval
+    self.opakovania = opakovania
+
+  def dajRychlost(self):
+    return self.rychlost
+
+  def dajGifOpakovania(self):
+    return self.opakovania
+
+  def dajKoncovyInterval(self):
+    return self.koncovyInterval
+
 
 class Test_NastrojeParsera(unittest.TestCase):
   def test_dajAtribut(self):

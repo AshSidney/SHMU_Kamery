@@ -3,7 +3,7 @@ import html.parser
 import re
 import os.path
 import PIL.Image
-import ffmpeg
+import ffmpeg # ffmpeg-python 
 
 def dajZoznamKamier():
   parser = KameraParser()
@@ -42,15 +42,17 @@ def vytvorVideo(obrazky, videoSubor, framerate):
   video.stdin.close()
   video.wait()
 
-def vytvorGif(obrazky, subor, framerate):
-  pass
+def vytvorGif(obrazky, subor, opakovania, interval, koncovyInterval):
+  durations = (len(obrazky) - 1) * [interval]
+  durations.append(koncovyInterval)
+  obrazky[0].save(subor, save_all=True, append_images=obrazky[1:], duration=durations, loop=opakovania)
 
-def vytvorAnimaciu(obrazky, subor, framerate):
-  pripona = os.path.splitext()
+def vytvorAnimaciu(obrazky, subor, parametre):
+  nazov, pripona = os.path.splitext(subor)
   if pripona == '.gif':
-    vytvorGif(obrazky, subor, framerate)
+    vytvorGif(obrazky, subor, parametre.dajGifOpakovania(), int(1000/parametre.dajRychlost()), parametre.dajKoncovyInterval())
   else:
-    vytvorVideo(obrazky, subor, framerate)
+    vytvorVideo(obrazky, subor, parametre.dajRychlost())
 
 class Kamera:
   def __init__(self, link):

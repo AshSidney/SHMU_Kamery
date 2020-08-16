@@ -163,14 +163,23 @@ class AktualnaKamera(tkinter.Frame, SpracovanieVPozadi):
     self.rychlost = tkinter.Entry(self, width=2)
     self.rychlost.insert(0, '8')
     self.prehladTlacidlo = tkinter.Button(self, text='Prezri video', command=self.prezriVideo)
-    self.videoTlacidlo = tkinter.Button(self, text='Vytvor video', command=self.vytvorVideo)
+    self.videoTlacidlo = tkinter.Button(self, text='Vytvor video', command=lambda : self.vytvorAnimaciu('V'))
+    self.gifOddelovac = tkinter.ttk.Separator(self, orient=tkinter.HORIZONTAL)
+    self.gifNekonecno = tkinter.IntVar()
+    self.gifNekonecnoVolba = tkinter.Checkbutton(self, text='Nekonečné opakovanie', variable=self.gifNekonecno, command=self.zmenaNekonecna)
+    self.gifTlacidlo = tkinter.Button(self, text='Vytvor gif', command=lambda : self.vytvorAnimaciu('G'))
+    self.opakovaniaPopis = tkinter.Label(self, text='Počet opakovaní')
+    self.opakovania = tkinter.Entry(self, width=4)
+    self.opakovania.insert(0, '1')
+    self.koncovyIntervalPopis = tkinter.Label(self, text='Koncový interval [ms]')
+    self.koncovyInterval = tkinter.Entry(self, width=4)
+    self.koncovyInterval.insert(0, '250')
     self.navratTlacidlo = tkinter.Button(self, text='Späť', command=self.naPrehladKamier)
     self.stavNacitania = tkinter.ttk.Progressbar(self, orient=tkinter.HORIZONTAL, maximum=len(self.nazvyObrazkov),
       mode='determinate')
-    self.grid_rowconfigure(5, weight=1)
     self.guiNazov.grid(row=0, column=0, columnspan=3)
-    self.guiObrazok.grid(row=1, column=0, rowspan=5)
-    self.casovaOs.grid(row=6, column=0)
+    self.guiObrazok.grid(row=1, column=0, rowspan=10)
+    self.casovaOs.grid(row=10, column=0)
     self.zaciatok.grid(row=1, column=1, padx=4, pady=4)
     self.koniec.grid(row=1, column=2, padx=4, pady=4)
     self.zaciatokTlacidlo.grid(row=2, column=1, padx=4, pady=4)
@@ -179,8 +188,16 @@ class AktualnaKamera(tkinter.Frame, SpracovanieVPozadi):
     self.rychlost.grid(row=3, column=2, padx=4, pady=4)
     self.prehladTlacidlo.grid(row=4, column=1, padx=4, pady=4)
     self.videoTlacidlo.grid(row=4, column=2, padx=4, pady=4)
-    self.navratTlacidlo.grid(row=5, column=1, columnspan=2, sticky=tkinter.S, padx=4, pady=4)
-    self.stavNacitania.grid(row=6, column=1, columnspan=2)
+    self.gifOddelovac.grid(row=5, column=1, columnspan=2, sticky=tkinter.W+tkinter.E)
+    self.gifNekonecnoVolba.grid(row=6, column=1)
+    self.gifTlacidlo.grid(row=6, column=2, padx=4, pady=4)
+    self.opakovaniaPopis.grid(row=7, column=1)
+    self.opakovania.grid(row=7, column=2)
+    self.koncovyIntervalPopis.grid(row=8, column=1)
+    self.koncovyInterval.grid(row=8, column=2)
+    self.grid_rowconfigure(9, weight=1)
+    self.navratTlacidlo.grid(row=9, column=1, columnspan=2, sticky=tkinter.S, padx=4, pady=4)
+    self.stavNacitania.grid(row=10, column=1, columnspan=2)
     SpracovanieVPozadi.__init__(self)
 
   def schovaj(self):
@@ -230,22 +247,31 @@ class AktualnaKamera(tkinter.Frame, SpracovanieVPozadi):
   def dajRychlost(self):
     return self.dajHodnotu(self.rychlost, 10)
 
-  def vytvorVideo(self):
+  def dajGifNekonecno(self):
+    return self.gifNekonecno.get() != 0
+
+  def dajGifOpakovania(self):
+    return 0 if self.dajGifNekonecno() else self.dajHodnotu(self.opakovania, 1)
+
+  def dajKoncovyInterval(self):
+    return self.dajHodnotu(self.koncovyInterval, 250)
+
+  def vytvorAnimaciu(self, typ):
     adresar = self.master.nastavenia.data['adresar'] if 'adresar' in self.master.nastavenia.data else '~/Videos'
-    nazovVidea = tkinter.filedialog.asksaveasfilename(initialdir=adresar, title='Vyber video subor',
-      filetypes = (('avi subory','*.avi'),('gif subory','*.gif'),('vsetky subory','*.*')))
+    suborTypy = (('gif subory','*.gif'),) if typ == 'G' else (('avi subory','*.avi'),('vsetky subory','*.*'))
+    nazovVidea = tkinter.filedialog.asksaveasfilename(initialdir=adresar, title='Vyber cielovy subor', filetypes=suborTypy)
     if nazovVidea == '':
       return
     nazov, pripona = os.path.splitext(nazovVidea)
     if pripona == '':
-      nazovVidea += '.avi'
+      nazovVidea += '.gif' if typ == 'G' else '.avi'
     self.master.nastavenia.data['adresar'] = os.path.split(nazov)[0]
     start = self.dajZaciatok()
     koniec = self.dajKoniec() + 1
     if self.videoVlakno is None:
-      self.videoVlakno = VideoZapis(self.vsetkyObrazky[start:koniec], nazovVidea, self.dajRychlost())
+      self.videoVlakno = VideoZapis(self.vsetkyObrazky[start:koniec], nazovVidea, self)
       self.stavNacitania = tkinter.ttk.Progressbar(self, orient=tkinter.HORIZONTAL, mode='indeterminate')
-      self.stavNacitania.grid(row=6, column=1, columnspan=2)
+      self.stavNacitania.grid(row=10, column=1, columnspan=2)
       self.stavNacitania.start()
 
   def prezriVideo(self):
@@ -275,22 +301,25 @@ class AktualnaKamera(tkinter.Frame, SpracovanieVPozadi):
     self.koniec.delete(0, tkinter.END)
     self.koniec.insert(0, str(self.casovaOs.get()))
 
+  def zmenaNekonecna(self):
+    self.opakovania.configure(state=tkinter.DISABLED if self.dajGifNekonecno() else tkinter.NORMAL)
+
   def naPrehladKamier(self):
     self.schovaj()
     self.master.kamery.zobraz()
 
 
 class VideoZapis(threading.Thread):
-  def __init__(self, obrazky, nazovVidea, rychlost):
+  def __init__(self, obrazky, nazovVidea, parametre):
     super().__init__()
     self.obrazky = obrazky
     self.nazovVidea = nazovVidea
-    self.rychlost = rychlost
+    self.parametre = parametre
     self.zapisBezi = True
     self.start()
 
   def run(self):
-    SHMU_Kamery.vytvorAnimaciu(self.obrazky, self.nazovVidea, self.rychlost)
+    SHMU_Kamery.vytvorAnimaciu(self.obrazky, self.nazovVidea, self.parametre)
     self.zapisBezi = False
 
 
