@@ -1,5 +1,6 @@
 import urllib.request
 import html.parser
+import ssl
 import re
 import os.path
 import PIL.Image
@@ -154,5 +155,6 @@ class ObrazkyParser (html.parser.HTMLParser):
           start = -1
 
 
-shmuAdresa = 'http://www.shmu.sk/'
+shmuAdresa = 'https://www.shmu.sk/'
 shmuWebAdresa = shmuAdresa + 'sk/'
+ssl._create_default_https_context = ssl._create_unverified_context
