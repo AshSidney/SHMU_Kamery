@@ -146,7 +146,7 @@ class AktualnaKamera(tkinter.Frame, SpracovanieVPozadi):
     self.videoVlakno = None
     self.nazvyObrazkov = SHMU_Kamery.dajObrazkyKamery(self.kamera)
     self.vsetkyObrazky = [None] * len(self.nazvyObrazkov)
-    self.aktualnyObrazok = PIL.ImageTk.PhotoImage(SHMU_Kamery.dajObrazok(self.nazvyObrazkov[-1]))
+    self.aktualnyObrazok = PIL.ImageTk.PhotoImage(SHMU_Kamery.dajObrazok(self.nazvyObrazkov[0]))
     self.grid(row=0, column=0)
     self.guiNazov = tkinter.ttk.Label(self, text=self.kamera.nazov)
     self.guiObrazok = tkinter.ttk.Label(self, image=self.aktualnyObrazok)
@@ -198,6 +198,8 @@ class AktualnaKamera(tkinter.Frame, SpracovanieVPozadi):
     self.grid_rowconfigure(9, weight=1)
     self.navratTlacidlo.grid(row=9, column=1, columnspan=2, sticky=tkinter.S, padx=4, pady=4)
     self.stavNacitania.grid(row=10, column=1, columnspan=2)
+    self.poslednyNacitany = len(self.vsetkyObrazky) - 1
+    self.nacitanieAnimacia = True
     SpracovanieVPozadi.__init__(self)
 
   def schovaj(self):
@@ -212,8 +214,9 @@ class AktualnaKamera(tkinter.Frame, SpracovanieVPozadi):
     SpracovanieVPozadi.spracujUdalosti(self)
 
   def pracaVPozadi(self):
-    for index in range(len(self.nazvyObrazkov) - 1, -1, -1):
-      self.udalosti.put((index, SHMU_Kamery.dajObrazok(self.nazvyObrazkov[index])))
+    for index in range(len(self.nazvyObrazkov)):
+      invIndex = len(self.nazvyObrazkov) - index - 1
+      self.udalosti.put((invIndex, SHMU_Kamery.dajObrazok(self.nazvyObrazkov[index])))
       if self.prerusenieVlakna:
         break
     self.udalosti.put(None)
@@ -221,11 +224,15 @@ class AktualnaKamera(tkinter.Frame, SpracovanieVPozadi):
   def spracujData(self, obrazok):
     self.vsetkyObrazky[obrazok[0]] = obrazok[1]
     self.stavNacitania.step(1)
+    self.poslednyNacitany = obrazok[0]
+    if self.nacitanieAnimacia:
+      self.casovaOs.set(obrazok[0])
     if obrazok[0] == 0:
       self.stavNacitania.grid_forget()
 
   def zmenaPozicie(self, event):
     index = self.casovaOs.get()
+    self.nacitanieAnimacia = self.nacitanieAnimacia and index == self.poslednyNacitany
     if self.vsetkyObrazky[index] is not None:
       self.aktualnyObrazok = PIL.ImageTk.PhotoImage(self.vsetkyObrazky[index])
     self.guiObrazok.configure(image=self.aktualnyObrazok)

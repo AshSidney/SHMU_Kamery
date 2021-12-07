@@ -1,0 +1,1 @@
+pyinstaller -F -n SHMU_Kamery gui.py

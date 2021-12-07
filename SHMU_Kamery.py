@@ -9,7 +9,7 @@ import ffmpeg # ffmpeg-python
 def dajZoznamKamier():
   parser = KameraParser()
   with urllib.request.urlopen(shmuWebAdresa + '?page=1&id=webkamery') as stranka:
-    parser.feed(stranka.read().decode('utf-8'))
+    parser.nacitaj(stranka)
   return parser.kamery
 
 def dajKamerySNahladmi():
@@ -20,13 +20,13 @@ def dajKamerySNahladmi():
 def dajObrazkyKamery(kamera):
   parser = ObrazkyParser(kamera)
   with urllib.request.urlopen(shmuWebAdresa + kamera.link + '&c=360') as stranka:
-    parser.feed(stranka.read().decode('utf-8'))
+    parser.nacitaj(stranka)
   return parser.obrazky
 
 def dajObrazok(obrazok):
   for retry in range(16):
     try:
-      with urllib.request.urlopen(shmuAdresa + obrazok.link) as obrazokData:
+      with urllib.request.urlopen(shmuAdresa + obrazok) as obrazokData:
         return PIL.Image.open(obrazokData)
     except:
       pass
@@ -64,7 +64,7 @@ class Kamera:
     self.nazov = nazov
 
   def nastavNahlad(self, nahladLink):
-    self.nahladLink = Obrazok(self, ('', nahladLink))
+    self.nahladLink = nahladLink
 
   def ziskajNahlad(self):
     nahlad = dajObrazok(self.nahladLink)
@@ -73,25 +73,19 @@ class Kamera:
   def dajCestuObrazku(self):
     return 'data/datawebcam/' + self.id + '/'
 
-class Obrazok:
-  def __init__(self, kamera, data):
-    self.nazov = data[0]
-    cestaObrazku = kamera.dajCestuObrazku()
-    najdenyLink = re.search(cestaObrazku + r'(\d{8}_\d{6}.jpg)', data[1])
-    self.link = cestaObrazku + (najdenyLink.group(1) if najdenyLink is not None else data[1])
 
-  def __eq__(self, value):
-    return self.nazov == value.nazov and self.link == value.link
+class Parser (html.parser.HTMLParser):
+  def nacitaj(self, stranka):
+    data = stranka.read()
+    self.feed(data.decode('utf8'))
 
+  def dajAtribut(self, attrs, attrNazov):
+    for attr in attrs:
+      if attr[0] == attrNazov:
+        return attr[1]
+    return None
 
-def dajAtribut(attrs, attrNazov):
-  for attr in attrs:
-    if attr[0] == attrNazov:
-      return attr[1]
-  return None
-
-
-class KameraParser (html.parser.HTMLParser):
+class KameraParser (Parser):
   def __init__(self):
     super().__init__()
     self.kamery = []
@@ -101,33 +95,32 @@ class KameraParser (html.parser.HTMLParser):
 
   def handle_starttag(self, tag, attrs):
     if self.kameraDivPocet == 0:
-      if tag == 'div' and dajAtribut(attrs, 'id') == 'maincontent':
+      if tag == 'div' and self.dajAtribut(attrs, 'id') == 'maincontent':
         self.kameraDivPocet = 1
     else:
       if tag == 'div':
         self.kameraDivPocet += 1
+        if self.dajAtribut(attrs, 'class') == 'text-center':
+          self.vNazveKamery = True
       elif tag == 'a':
-        self.aktualnaKamera = Kamera(dajAtribut(attrs, 'href'))
-      elif tag == 'h3':
-        self.vNazveKamery = True
+        self.aktualnaKamera = Kamera(self.dajAtribut(attrs, 'href'))
       elif tag == 'img':
         if self.aktualnaKamera is not None:
-          self.aktualnaKamera.nastavNahlad(dajAtribut(attrs, 'src'))
+          self.aktualnaKamera.nastavNahlad(self.dajAtribut(attrs, 'src'))
 
   def handle_endtag(self, tag):
+    if tag == 'a' and self.aktualnaKamera is not None:
+      self.kamery.append(self.aktualnaKamera)
+      self.aktualnaKamera = None
     if tag == 'div' and self.kameraDivPocet > 0:
       self.kameraDivPocet -= 1
-      if self.aktualnaKamera is not None:
-        self.kamery.append(self.aktualnaKamera)
-        self.aktualnaKamera = None
 
   def handle_data(self, data):
     if self.aktualnaKamera is not None and self.vNazveKamery:
       self.aktualnaKamera.nastavNazov(data)
       self.vNazveKamery = False
 
-
-class ObrazkyParser (html.parser.HTMLParser):
+class ObrazkyParser (Parser):
   def __init__(self, kamera):
     super().__init__()
     self.kamera = kamera
@@ -135,7 +128,7 @@ class ObrazkyParser (html.parser.HTMLParser):
     self.vSkripte = False
 
   def handle_starttag(self, tag, attrs):
-    if tag == 'script' and dajAtribut(attrs, 'type') == 'text/javascript':
+    if tag == 'script':
       self.vSkripte = True
 
   def handle_endtag(self, tag):
@@ -143,14 +136,14 @@ class ObrazkyParser (html.parser.HTMLParser):
       self.vSkripte = False
 
   def handle_data(self, data):
-    if self.vSkripte and re.match(r'\s*var img_dts.*', data):
-      vzor = re.compile(r'img_dts\[\d*\]=\'(.*?)\'; img_files\[\d*\]=\'(.*?)\';')
+    if self.vSkripte and re.match(r'\s*var img_files*', data):
+      vzor = re.compile(r'img_files\[\d*\]=\'(.*?)\';')
       start = 0
       while start >= 0:
         najdene = vzor.search(data, start)
         if najdene is not None:
-          self.obrazky.append(Obrazok(self.kamera, najdene.groups()))
-          start = najdene.span()[1]
+          self.obrazky.append(najdene.group(1))
+          start = najdene.end()
         else:
           start = -1
 

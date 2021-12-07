@@ -17,7 +17,7 @@ class Test_Kamery(unittest.TestCase):
       self.assertIsInstance(kamera.nazov, str)
       self.assertGreater(len(kamera.nazov), 0)
       self.assertIsNotNone(kamera.nahladLink)
-      self.assertIsNotNone(re.match(r'data/datawebcam/' + kamera.id + r'/\d{8}_\d{6}.jpg', kamera.nahladLink.link))
+      self.assertIsNotNone(re.match(r'/data/datawebcam/' + kamera.id + r'/\d{8}_\d{6}.jpg', kamera.nahladLink))
 
   def test_kamerySNahladmi(self):
     for kamera in SHMU_Kamery.dajKamerySNahladmi():
@@ -36,10 +36,10 @@ class Test_Kamery(unittest.TestCase):
     obrazky = SHMU_Kamery.dajObrazkyKamery(kamery[0])
     self.assertEqual(len(obrazky), 360)
     for obrazok in obrazky:
-      self.assertIsInstance(obrazok, SHMU_Kamery.Obrazok)
-      self.assertIsNotNone(re.match(r'data/datawebcam/' + kamery[0].id + r'/\d{8}_\d{6}.jpg', obrazok.link))
-      self.assertIsInstance(obrazok.nazov, str)
-      self.assertGreater(len(obrazok.nazov), 0)
+      self.assertIsInstance(obrazok, str)
+      self.assertIsNotNone(re.match(r'/data/datawebcam/' + kamery[0].id + r'/\d{8}_\d{6}.jpg', obrazok))
+      #self.assertIsInstance(obrazok.nazov, str)
+      #self.assertGreater(len(obrazok.nazov), 0)
 
   def test_ziskanieObrazku(self):
     kamery = SHMU_Kamery.dajZoznamKamier()
@@ -110,23 +110,24 @@ class AnimParametre:
 class Test_NastrojeParsera(unittest.TestCase):
   def test_dajAtribut(self):
     attrs = (('id', 'mainclass'),('href', 'http://link.address.com'),('class_name', 'test class'))
-    self.assertEqual(SHMU_Kamery.dajAtribut(attrs, 'pokus'), None)
-    self.assertEqual(SHMU_Kamery.dajAtribut(attrs, 'href'), 'http://link.address.com')
-    self.assertEqual(SHMU_Kamery.dajAtribut(attrs, 'id'), 'mainclass')
-    self.assertEqual(SHMU_Kamery.dajAtribut(attrs, 'invalid'), None)
+    parser = SHMU_Kamery.Parser()
+    self.assertEqual(parser.dajAtribut(attrs, 'pokus'), None)
+    self.assertEqual(parser.dajAtribut(attrs, 'href'), 'http://link.address.com')
+    self.assertEqual(parser.dajAtribut(attrs, 'id'), 'mainclass')
+    self.assertEqual(parser.dajAtribut(attrs, 'invalid'), None)
 
   def test_spracujObrazky(self):
     testKamera = SHMU_Kamery.Kamera('?page=1&id=webkamery&kamera=hdcam06')
     parser = SHMU_Kamery.ObrazkyParser(testKamera)
     parser.vSkripte = True
-    obrazky = parser.handle_data('''  var img_dts = new Array(); var img_files = new Array();
-      img_dts[0]='07.02.2019 05:04 SEČ'; img_files[0]='20190207_050400.jpg';
-      img_dts[1]='07.02.2019 05:06 SEČ'; img_files[1]='20190207_050600.jpg';
-      img_dts[2]='07.02.2019 05:08 SEČ'; img_files[2]='20190207_050800.jpg';''')
+    obrazky = parser.handle_data('''  var img_files = new Array();
+      img_files[0]='/data/datawebcam/hdcam01/20211130_190000.jpg'; 
+      img_files[1]='/data/datawebcam/hdcam01/20211130_185800.jpg'; 
+      img_files[2]='/data/datawebcam/hdcam01/20211130_185600.jpg';''')
     self.assertEqual(len(parser.obrazky), 3)
-    self.assertEqual(parser.obrazky[0], SHMU_Kamery.Obrazok(testKamera, ('07.02.2019 05:04 SEČ', '20190207_050400.jpg')))
-    self.assertEqual(parser.obrazky[1], SHMU_Kamery.Obrazok(testKamera, ('07.02.2019 05:06 SEČ', '20190207_050600.jpg')))
-    self.assertEqual(parser.obrazky[2], SHMU_Kamery.Obrazok(testKamera, ('07.02.2019 05:08 SEČ', '20190207_050800.jpg')))
+    self.assertEqual(parser.obrazky[0], '/data/datawebcam/hdcam01/20211130_190000.jpg')
+    self.assertEqual(parser.obrazky[1], '/data/datawebcam/hdcam01/20211130_185800.jpg')
+    self.assertEqual(parser.obrazky[2], '/data/datawebcam/hdcam01/20211130_185600.jpg')
 
 
 if __name__ == '__main__':
