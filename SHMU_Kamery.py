@@ -4,11 +4,14 @@ import ssl
 import re
 import os.path
 import PIL.Image
-import ffmpeg # ffmpeg-python 
+import ffmpeg # ffmpeg-python
+
+def dajUrlRequest(urlAddress):
+  return urllib.request.Request(urlAddress, headers={'Cache-Control': 'max-age=0'})
 
 def dajZoznamKamier():
   parser = KameraParser()
-  with urllib.request.urlopen(shmuWebAdresa + '?page=1&id=webkamery') as stranka:
+  with urllib.request.urlopen(dajUrlRequest(shmuWebAdresa + '?page=1&id=webkamery')) as stranka:
     parser.nacitaj(stranka)
   return parser.kamery
 
@@ -19,14 +22,14 @@ def dajKamerySNahladmi():
 
 def dajObrazkyKamery(kamera):
   parser = ObrazkyParser(kamera)
-  with urllib.request.urlopen(shmuWebAdresa + kamera.link + '&c=360') as stranka:
+  with urllib.request.urlopen(dajUrlRequest(shmuWebAdresa + kamera.link + '&c=360')) as stranka:
     parser.nacitaj(stranka)
   return parser.obrazky
 
 def dajObrazok(obrazok):
   for retry in range(16):
     try:
-      with urllib.request.urlopen(shmuAdresa + obrazok) as obrazokData:
+      with urllib.request.urlopen(dajUrlRequest(shmuAdresa + obrazok)) as obrazokData:
         return PIL.Image.open(obrazokData)
     except:
       pass
